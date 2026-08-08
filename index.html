@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mindful Minute</title>
+<style>
+  /* ---------- Basic page setup ---------- */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    height: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Trebuchet MS', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(255,255,255,0.85), transparent 35%),
+      linear-gradient(135deg, #dff5f0 0%, #e7f4fb 45%, #f7ecd5 100%);
+    color: #45666d;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .app {
+    text-align: center;
+    color: #4b6167;
+    position: relative;
+    width: min(92vw, 620px);
+    max-width: 100%;
+  }
+
+  /* Each screen sits in the same spot; we show/hide with .hidden
+     instead of stacking them one after another on the page. */
+  .screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    border-radius: clamp(20px, 3vw, 32px);
+    padding: clamp(28px, 5vw, 48px) clamp(20px, 4vw, 36px);
+    box-shadow: 0 24px 70px rgba(53, 81, 90, 0.16);
+    min-height: min(72vh, 560px);
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .screen.hidden {
+    display: none;
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  .logo {
+    width: clamp(220px, 48vw, 380px);
+    max-width: 100%;
+    height: auto;
+    margin-bottom: clamp(16px, 3vw, 24px);
+    filter: drop-shadow(0 14px 28px rgba(70, 117, 130, 0.22));
+  }
+
+  /* ---------- The breathing circle area ---------- */
+  .circle-wrapper {
+    position: relative;
+    width: min(78vw, 320px);
+    aspect-ratio: 1;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto clamp(24px, 4vw, 32px) auto;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0) 60%),
+      linear-gradient(135deg, rgba(255,255,255,0.68), rgba(214,239,245,0.95));
+    border: 1px solid rgba(255,255,255,0.8);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.8),
+      0 20px 45px rgba(90, 132, 142, 0.16);
+  }
+
+  /* Soft outer glow ring, stays fixed size, just for atmosphere */
+  .glow {
+    position: absolute;
+    width: min(92%, 300px);
+    aspect-ratio: 1;
+    height: auto;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.56) 0%, rgba(255,255,255,0) 72%);
+    filter: blur(2px);
+  }
+
+  /* The circle that actually grows and shrinks */
+  .circle {
+    position: relative;
+    width: clamp(110px, 32vw, 150px);
+    height: clamp(110px, 32vw, 150px);
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffffff 0%, #9fd8e4 55%, #6ca9b9 100%);
+    border: 2px solid rgba(255,255,255,0.95);
+    box-shadow: 0 18px 45px rgba(108, 169, 185, 0.25);
+    /* transition controls how smoothly the circle resizes.
+       We change this duration dynamically in JS to match each phase. */
+    transition: transform 4s ease-in-out;
+  }
+
+  /* Text label that sits on top of the circle */
+  .phase-text {
+    position: absolute;
+    font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+    font-weight: 600;
+    color: #3f5b63;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-family: 'Georgia', 'Times New Roman', serif;
+  }
+
+  /* ---------- Controls ---------- */
+  .timer {
+    font-size: clamp(0.9rem, 2vw, 0.95rem);
+    color: #6b8188;
+    margin-bottom: 0;
+    min-height: 1.2em;
+    font-weight: 500;
+  }
+
+  button {
+    padding: clamp(10px, 2.2vw, 12px) clamp(24px, 5vw, 36px);
+    font-size: clamp(0.95rem, 2.2vw, 1rem);
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #7fc8d9, #5aa8b6);
+    color: white;
+    font-family: 'Trebuchet MS', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    box-shadow: 0 10px 24px rgba(90, 168, 182, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+
+  button:hover {
+    filter: brightness(1.03);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(90, 168, 182, 0.3);
+  }
+
+  button:active {
+    transform: translateY(0);
+  }
+
+  button:disabled {
+    opacity: 0.6;
+    cursor: default;
+    transform: none;
+    box-shadow: 0 8px 18px rgba(90, 168, 182, 0.2);
+  }
+
+  @media (max-width: 600px) {
+    body {
+      align-items: flex-start;
+    }
+
+    .screen {
+      padding: clamp(24px, 6vw, 32px) clamp(16px, 5vw, 24px);
+      min-height: auto;
+    }
+
+    .circle-wrapper {
+      width: min(82vw, 280px);
+    }
+
+    .glow {
+      width: min(92%, 250px);
+    }
+
+    .circle {
+      width: clamp(100px, 30vw, 125px);
+      height: clamp(100px, 30vw, 125px);
+    }
+
+    .logo {
+      width: min(76vw, 260px);
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- SCREEN 1: Logo + Start button only -->
+    <div class="screen" id="startScreen">
+      <img src="Logo/mindful_logo_clean.png" alt="Mindful Minute logo" class="logo">
+      <button id="startBtn">Start</button>
+    </div>
+
+    <!-- SCREEN 2: Breathing circle, hidden until Start is pressed -->
+    <div class="screen hidden" id="sessionScreen">
+      <div class="circle-wrapper">
+        <div class="glow"></div>
+        <div class="circle" id="circle"></div>
+        <div class="phase-text" id="phaseText">Ready?</div>
+      </div>
+      <div class="timer" id="timer"></div>
+    </div>
+
+  </div>
+
+<script>
+  // ---------- Grab the elements we need to control ----------
+  const circle = document.getElementById('circle');
+  const phaseText = document.getElementById('phaseText');
+  const timerText = document.getElementById('timer');
+  const startBtn = document.getElementById('startBtn');
+  const startScreen = document.getElementById('startScreen');
+  const sessionScreen = document.getElementById('sessionScreen');
+
+  // ---------- Define the breathing cycle ----------
+  // Each phase has: a label to show, how long it lasts (ms),
+  // and what scale the circle should animate to during that phase.
+  const phases = [
+    { label: "Inhale", duration: 4000, scale: 1.6 },
+    { label: "Hold", duration: 2000, scale: 1.6 },
+    { label: "Exhale", duration: 6000, scale: 1.0 },
+    { label: "Hold", duration: 2000, scale: 1.0 }
+  ];
+
+  let currentPhaseIndex = 0;
+  let cycleCount = 0;
+  const totalCycles = 5;      // how many full in-hold-out cycles to run
+  let running = false;
+  let phaseTimeoutId = null;
+
+  // Runs one phase (breathe in / hold / breathe out), then schedules the next
+  function runPhase() {
+    if (!running) return;
+
+    const phase = phases[currentPhaseIndex];
+
+    // Update the text label and timer so the sequence feels clearer.
+    phaseText.textContent = phase.label.toUpperCase();
+
+    // Match the CSS transition speed to this phase's duration,
+    // so the circle finishes resizing exactly when the phase ends.
+    circle.style.transition = `transform ${phase.duration / 1000}s ease-in-out`;
+    circle.style.transform = `scale(${phase.scale})`;
+
+    // Simple countdown under the circle
+    let secondsLeft = phase.duration / 1000;
+    timerText.textContent = `${secondsLeft}s`;
+    const countdownId = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft > 0) {
+        timerText.textContent = `${secondsLeft}s`;
+      } else {
+        clearInterval(countdownId);
+      }
+    }, 1000);
+
+    // After this phase's duration, move to the next one
+    phaseTimeoutId = setTimeout(() => {
+      clearInterval(countdownId);
+
+      currentPhaseIndex++;
+
+      // If we finished a full in -> hold -> out cycle, count it
+      if (currentPhaseIndex >= phases.length) {
+        currentPhaseIndex = 0;
+        cycleCount++;
+      }
+
+      // Stop once we've completed the target number of cycles
+      if (cycleCount >= totalCycles) {
+        finishSession();
+      } else {
+        runPhase();
+      }
+    }, phase.duration);
+  }
+
+  function finishSession() {
+    running = false;
+    phaseText.textContent = "Well done";
+    timerText.textContent = "";
+    circle.style.transition = "transform 2s ease-in-out";
+    circle.style.transform = "scale(1)";
+
+    // Wait a moment on "Well done", then fade back to the logo screen
+    setTimeout(() => {
+      sessionScreen.classList.add('hidden');
+      startScreen.classList.remove('hidden');
+      startBtn.disabled = false;
+      startBtn.textContent = "Start";
+      // Reset circle + text for the next session
+      phaseText.textContent = "Ready?";
+      circle.style.transform = "scale(1)";
+    }, 2000);
+  }
+
+  function startSession() {
+    // Swap screens: hide the logo/start screen, reveal the breathing circle
+    startScreen.classList.add('hidden');
+    sessionScreen.classList.remove('hidden');
+
+    running = true;
+    currentPhaseIndex = 0;
+    cycleCount = 0;
+    runPhase();
+  }
+
+  startBtn.addEventListener('click', startSession);
+</script>
+
+</body>
+</html>
